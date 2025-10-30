@@ -14,7 +14,8 @@ class FederatedConfig:
         learning_rate=5e-4,
         seed=0,
         device=None,
-        models_dir=Path(__file__).parent.parent / "models"
+        models_dir=Path(__file__).parent.parent / "models",
+        communication_method="baseline"  # Options: "baseline", "signsgd", "quantization", "sparsification"
     ):
         self.num_clients = num_clients
         self.user_per_client_range = user_per_client_range
@@ -24,6 +25,12 @@ class FederatedConfig:
         self.latent_dim = latent_dim
         self.learning_rate = learning_rate
         self.seed = seed
+        self.communication_method = communication_method
+
+        # Validate communication method
+        valid_methods = ["baseline", "signsgd", "quantization", "sparsification"]
+        if communication_method not in valid_methods:
+            raise ValueError(f"communication_method must be one of {valid_methods}")
 
         if device is None:
             self.device = "cuda:0" if torch.cuda.is_available() else "cpu"

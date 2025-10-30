@@ -1,4 +1,86 @@
 import numpy as np
+import os
+
+
+class CommunicationTracker:
+    """
+    Track theoretical communication costs based on parameter counts.
+    Computes actual bytes transmitted for different compression methods.
+    """
+
+    def __init__(self, compression_method="baseline"):
+        """
+        Args:
+            compression_method: "baseline", "signsgd", "quantization", "sparsification"
+        """
+        self.compression_method = compression_method
+        self.reset()
+
+    def reset(self):
+        self.server_to_client_bytes = 0
+        self.client_to_server_bytes = 0
+        self.total_bytes = 0
+
+    def add_server_to_client(self, num_bytes, num_clients=1):
+        total = num_bytes * num_clients
+        self.server_to_client_bytes += total
+        self.total_bytes += total
+
+    def add_client_to_server(self, num_bytes):
+        self.client_to_server_bytes += num_bytes
+        self.total_bytes += num_bytes
+
+    def get_model_bytes(self, model, compression_method=None):
+        """
+        Compute theoretical bytes for transmitting model parameters.
+        Based on parameter count and compression method.
+
+        Args:
+            model: PyTorch model
+            compression_method: Override default compression method
+
+        Returns:
+            Number of bytes (theoretical, based on param count)
+        """
+        if compression_method is None:
+            compression_method = self.compression_method
+
+        # Count total parameters
+        total_params = sum(param.numel() for param in model.parameters())
+
+        if compression_method == "baseline":
+            # Float32: 4 bytes per parameter
+            return total_params * 4
+
+        elif compression_method == "signsgd":
+            # 1 bit per parameter
+            # Convert bits to bytes (round up)
+            return (total_params + 7) // 8  # Ceiling division
+
+        elif compression_method == "quantization":
+            # 8-bit quantization: 1 byte per parameter
+            return total_params * 1
+
+        elif compression_method == "sparsification":
+            # Assume 10% sparsity (send 10% of parameters)
+            # Need indices (int32) + values (float32)
+            sparse_params = int(total_params * 0.1)
+            return sparse_params * (4 + 4)  # 4 bytes index + 4 bytes value
+
+        else:
+            return total_params * 4
+
+    def get_file_bytes(self, file_path):
+        """Get actual file size (for debugging/comparison)."""
+        return os.path.getsize(file_path)
+
+    def get_stats(self):
+        return {
+            'server_to_client_bytes': self.server_to_client_bytes,
+            'client_to_server_bytes': self.client_to_server_bytes,
+            'total_bytes': self.total_bytes,
+            'total_mb': round(self.total_bytes / (1024 * 1024), 4)
+        }
 
 
 def hit_ratio(y, pred, N=10):
