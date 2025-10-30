@@ -58,14 +58,23 @@ class CommunicationTracker:
             return (total_params + 7) // 8  # Ceiling division
 
         elif compression_method == "quantization":
-            # 8-bit quantization: 1 byte per parameter
-            return total_params * 1
+            # 8-bit quantization: 1 byte per parameter + metadata
+            # Metadata: one float32 scale per tensor/layer
+            # Approximate: assume ~10-20 tensors in typical model
+            num_tensors = len(list(model.parameters()))
+            quantized_params_bytes = total_params * 1  # int8
+            metadata_bytes = num_tensors * 4  # float32 scale per tensor
+            return quantized_params_bytes + metadata_bytes
 
-        elif compression_method == "sparsification":
-            # Assume 10% sparsity (send 10% of parameters)
-            # Need indices (int32) + values (float32)
-            sparse_params = int(total_params * 0.1)
-            return sparse_params * (4 + 4)  # 4 bytes index + 4 bytes value
+        elif compression_method == "sparsification" or compression_method == "sparsification_memory":
+            # Sparsity: keep 10% of parameters (0.9 sparsity)
+            # Need to send: indices (int32) + values (float32)
+            # Both methods have same communication cost (memory is local)
+            keep_ratio = 0.1  # Default 10%
+            sparse_params = int(total_params * keep_ratio)
+            indices_bytes = sparse_params * 4  # int32 indices
+            values_bytes = sparse_params * 4   # float32 values
+            return indices_bytes + values_bytes
 
         else:
             return total_params * 4

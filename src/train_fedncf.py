@@ -197,7 +197,8 @@ class FederatedNCF:
             self.server_model.load_state_dict(aggregated_state)
 
         else:
-            # Baseline: FedAvg - average all model weights
+            # Baseline, Quantization, Sparsification: FedAvg - average all model weights
+            # Decompress all client models
             decompressed_models = []
             for compressed in compressed_data_list:
                 state_dict = self.comm_strategy.decompress(

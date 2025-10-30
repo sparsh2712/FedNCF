@@ -28,7 +28,7 @@ class FederatedConfig:
         self.communication_method = communication_method
 
         # Validate communication method
-        valid_methods = ["baseline", "signsgd", "quantization", "sparsification"]
+        valid_methods = ["baseline", "signsgd", "quantization", "sparsification", "sparsification_memory"]
         if communication_method not in valid_methods:
             raise ValueError(f"communication_method must be one of {valid_methods}")
 
